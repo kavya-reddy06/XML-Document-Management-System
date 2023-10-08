@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Add File - Document Management System</title>
+</head>
+<body>
+    <?php
+    // Check if the form is submitted
+    if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_FILES["fileToUpload"])) {
+        $uploadedFile = $_FILES["fileToUpload"];
+        $tmpFilePath = $uploadedFile["tmp_name"];
+
+        // Step 1: Encrypt the file using AES (Replace 'your_encryption_key_here' with your encryption key)
+        $encryptionKey = 'your_encryption_key_here';
+        $encryptedData = openssl_encrypt(file_get_contents($tmpFilePath), 'AES-256-CBC', $encryptionKey, 0, '1234567890123456');
+
+        // Step 2: Transform the encrypted data into XML using XSLT (Replace 'transform.xsl' with your XSLT file)
+        $xslt = new XSLTProcessor();
+        $xsl = new DOMDocument();
+        $xsl->load('transform.xsl'); // Replace 'transform.xsl' with your XSLT file
+        $xslt->importStylesheet($xsl);
+        $xml = $xslt->transformToXML(new SimpleXMLElement($encryptedData));
+
+        // Step 3: Compress the XML using ZIP (Replace 'compressed_file.zip' with your desired filename)
+        $zip = new ZipArchive();
+        $zipFileName = 'compressed_file.zip';
+        if ($zip->open($zipFileName, ZipArchive::CREATE | ZipArchive::OVERWRITE)) {
+            $zip->addFromString('encrypted_file.xml', $xml);
+            $zip->close();
+        }
+
+        // Step 4: Save the ZIP file to the desired location (Replace 'uploads/' with your desired directory)
+        $targetDir = 'uploads/';
+        $targetFile = $targetDir . basename($zipFileName);
+        rename($zipFileName, $targetFile);
+
+        // Perform any other actions (e.g., database insertion) here
+
+        echo "<h1>File uploaded, encrypted, transformed to XML, and compressed successfully!</h1>";
+        echo "<p>The compressed file is saved as: " . htmlspecialchars($targetFile) . "</p>";
+        exit();
+    }
+    ?>
+
+    <form action="<?php echo htmlspecialchars($_SERVER["PHP_SELF"]); ?>" method="post" enctype="multipart/form-data">
+        <label for="fileToUpload">Select a file to upload:</label>
+        <input type="file" name="fileToUpload" id="fileToUpload">
+        <input type="submit" value="Upload and Process">
+    </form>
+</body>
+</html>
